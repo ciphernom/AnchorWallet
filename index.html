@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#0b0f14" />
+  <link rel="manifest" href="manifest.json">
+  <title>Anchor — Bitcoin Wallet (MVP)</title>
+  <style>
+    :root { --bg:#0b0f14; --fg:#e7f1ff; --muted:#97a3b6; --accent:#3aa675; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Helvetica, Arial, Apple Color Emoji;
+      background: var(--bg); color: var(--fg);
+    }
+    header { padding: 12px 16px; border-bottom: 1px solid #1c2633; display:flex; align-items:center; gap:8px; }
+    header .dot { width:10px; height:10px; border-radius:50%; background:#9aa7bd; }
+    header .title { font-weight: 700; letter-spacing: .5px; }
+    main { padding: 16px; max-width: 700px; margin: 0 auto; }
+    .card { border: 1px solid #1c2633; border-radius: 14px; padding: 16px; background: #0f141b; box-shadow: 0 4px 16px rgba(0,0,0,.25); }
+    .stack { display: grid; gap: 12px; }
+    .row { display:flex; gap:8px; align-items:center; }
+    .btn {
+      background: #15202c; color: var(--fg); padding: 12px 14px; border-radius: 12px; border: 1px solid #223244;
+      cursor: pointer; font-weight: 600;
+    }
+    .btn.accent { background: var(--accent); border-color: #2b7e59; color: #08110c; }
+    .btn.warn { background:#7d2a2a; border-color:#9d3d3d; }
+    .btn:disabled { opacity:.5; cursor:not-allowed; }
+    input, select, textarea {
+      width: 100%; padding: 12px 14px; border-radius: 12px; border: 1px solid #223244; background:#0b1219; color: var(--fg);
+      font-size: 16px;
+    }
+    label { font-size: 13px; color: var(--muted); }
+    .muted { color: var(--muted); }
+    .center { text-align:center; }
+    .balance { font-size: 32px; font-weight: 800; letter-spacing:.3px; }
+    .grid2 { display:grid; gap:10px; grid-template-columns: 1fr 1fr; }
+    .qr { display:flex; justify-content:center; padding: 16px; }
+    .banner { padding: 10px 12px; border:1px dashed #2b3b4e; border-radius:12px; background:#0c131b; font-size: 13px; }
+    .hidden { display:none !important; }
+    a.inline { color: #8ad1b1; text-decoration: none; }
+    footer { padding: 12px 16px; color: var(--muted); font-size:12px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="dot"></div>
+    <div class="title">Anchor</div>
+    <div class="muted" style="margin-left:auto;font-size:12px;">Bitcoin-only • PWA MVP</div>
+  </header>
+  <main class="stack">
+    <div class="banner">⚠️ Only enter your password on your own offline copy. Never upload your Anchor File. No keys are stored here.</div>
+
+    <!-- Screen: landing -->
+    <section id="screen-landing" class="card stack">
+      <h2>Welcome</h2>
+      <button id="btn-create" class="btn accent">Create New Wallet</button>
+      <button id="btn-open" class="btn">Open Existing Wallet (Anchor File)</button>
+      <button id="btn-restore" class="btn">Restore from Seed</button>
+      <div class="muted">MVP scope: single account (BIP84 P2WPKH), mainnet only, no fiat, simple fees.</div>
+    </section>
+
+    <!-- Screen: create -->
+    <section id="screen-create" class="card stack hidden">
+      <h2>Create New Wallet</h2>
+      <div class="stack">
+        <label>Your 12-word recovery phrase</label>
+        <textarea id="mnemonic" rows="3" readonly></textarea>
+        <div class="muted">Write these words down (in order). Anyone with them can take your bitcoin.</div>
+        <label>Create password (encrypts your Anchor File)</label>
+        <input id="create-password" type="password" placeholder="Strong password" autocomplete="new-password" />
+        <div class="grid2">
+          <button id="btn-save-anchor" class="btn accent">Download Anchor File</button>
+          <button id="btn-cancel-create" class="btn">Cancel</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Screen: restore -->
+    <section id="screen-restore" class="card stack hidden">
+      <h2>Restore from Seed</h2>
+      <label>Enter 12 or 24 words</label>
+      <textarea id="restore-mnemonic" rows="3" placeholder="abandon ability ..."></textarea>
+      <label>New password (to encrypt new Anchor File)</label>
+      <input id="restore-password" type="password" placeholder="Strong password" autocomplete="new-password" />
+      <div class="grid2">
+        <button id="btn-restore-do" class="btn accent">Make Anchor File</button>
+        <button id="btn-cancel-restore" class="btn">Cancel</button>
+      </div>
+    </section>
+
+    <!-- Screen: open -->
+    <section id="screen-open" class="card stack hidden">
+      <h2>Open Wallet</h2>
+      <input id="file-input" type="file" accept="application/json" />
+      <input id="open-password" type="password" placeholder="Password to decrypt" autocomplete="current-password" />
+      <div class="grid2">
+        <button id="btn-open-do" class="btn accent">Open</button>
+        <button id="btn-cancel-open" class="btn">Cancel</button>
+      </div>
+    </section>
+
+    <!-- Screen: wallet -->
+    <section id="screen-wallet" class="card stack hidden">
+      <div class="row" style="justify-content:space-between;align-items:center;">
+        <div>
+          <div class="muted">Balance</div>
+          <div id="balance" class="balance">0.00000000 BTC</div>
+        </div>
+        <div class="row">
+          <button id="btn-lock" class="btn warn">Lock</button>
+          <button id="btn-install" class="btn">Install PWA</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <button id="btn-receive" class="btn accent">Receive</button>
+        <button id="btn-send" class="btn">Send</button>
+      </div>
+
+      <!-- Receive -->
+      <div id="panel-receive" class="stack hidden">
+        <label>Your address (next unused)</label>
+        <input id="receive-address" readonly />
+        <div class="qr"><canvas id="qr-canvas"></canvas></div>
+        <button id="btn-copy-addr" class="btn">Copy address</button>
+      </div>
+
+      <!-- Send -->
+      <div id="panel-send" class="stack hidden">
+        <label>Recipient address</label>
+        <input id="send-to" placeholder="bc1..." />
+        <label>Amount (BTC)</label>
+        <input id="send-amount" placeholder="0.001" />
+        <label>Fee (sats/vB)</label>
+        <select id="send-fee">
+          <option value="5">Slow (5)</option>
+          <option value="10" selected>Normal (10)</option>
+          <option value="20">Fast (20)</option>
+        </select>
+        <button id="btn-scan" class="btn">Scan QR</button>
+        <button id="btn-send-do" class="btn accent">Confirm & Send</button>
+        <div id="send-status" class="muted"></div>
+        <video id="qr-video" class="hidden" style="width:100%;max-height:240px;border-radius:12px;"></video>
+      </div>
+
+      <div class="stack">
+        <div class="muted">Recent (simple): last txids only</div>
+        <div id="recent" class="stack"></div>
+      </div>
+    </section>
+  </main>
+  <footer class="center">Open-source, no custodial backend. MVP cuts complexity to ship fast.</footer>
+
+<!-- index.html -->
+<script type="module">
+  import { Buffer } from 'https://esm.sh/buffer@6.0.3?bundle';
+  window.Buffer = Buffer; // make it available to bitcoinjs-lib and your code
+</script>
+
+<!-- add a cache-busting query so the SW doesn’t serve the old app.js -->
+<script type="module" src="./js/app.js?v=2"></script>
+
+</body>
+</html>
